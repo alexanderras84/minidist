@@ -1,34 +1,44 @@
 #!/bin/bash
 set -e
 
-echo "[INFO] Starting sing-box with dynamic config"
+echo "[INFO] Starting sing-box..."
 
-ROUTE_RULES=""
+# Validate required env vars
+REQUIRED_VARS=("SUBDOMAIN" "RESOLVER_ID" "SMARTSTREAMING_DNS")
+for var in "${REQUIRED_VARS[@]}"; do
+  if [[ -z "${!var}" ]]; then
+    echo "[ERROR] Missing required environment variable: $var"
+    exit 1
+  fi
+done
 
-# Add domain_suffix rules
+# Build dynamic routing rules from env vars
+RULES=""
+
+# domain_suffix rules
 if [[ -n "$PROXY_DOMAIN_SUFFIXES" ]]; then
   for sfx in $(echo "$PROXY_DOMAIN_SUFFIXES" | tr ',' ' '); do
-    ROUTE_RULES="${ROUTE_RULES}    { \"domain_suffix\": [\"$sfx\"], \"outbound\": \"smartstreaming\" },\n"
+    RULES="${RULES}    { \"domain_suffix\": [\"$sfx\"], \"outbound\": \"smartstreaming\" },\n"
   done
 fi
 
-# Add domain_keyword rules
+# domain_keyword rules
 if [[ -n "$PROXY_DOMAIN_KEYWORDS" ]]; then
   for kw in $(echo "$PROXY_DOMAIN_KEYWORDS" | tr ',' ' '); do
-    ROUTE_RULES="${ROUTE_RULES}    { \"domain_keyword\": [\"$kw\"], \"outbound\": \"smartstreaming\" },\n"
+    RULES="${RULES}    { \"domain_keyword\": [\"$kw\"], \"outbound\": \"smartstreaming\" },\n"
   done
 fi
 
-# Fallback rule
-ROUTE_RULES="${ROUTE_RULES}    { \"outbound\": \"controld\" }"
+# Fallback rule (ControlD)
+RULES="${RULES}    { \"outbound\": \"controld\" }"
 
-# Fill in the template
-envsubst < /singbox/config.template.json > /singbox/config.pre.json
+# Export variables for envsubst
+export SUBDOMAIN
+export RESOLVER_ID
+export SMARTSTREAMING_DNS
+export ROUTE_RULES="${RULES}"
 
-# Inject rules into config.json
-awk -v rules="$ROUTE_RULES" '
-  /__ROUTE_RULES__/ { gsub(/__ROUTE_RULES__/, ""); print rules; next }
-  { print }
-' /singbox/config.pre.json > /singbox/config.json
+# Substitute everything into config.json
+envsubst < /singbox/config.template.json > /singbox/config.json
 
 exec /singbox/sing-box run -c /singbox/config.json
