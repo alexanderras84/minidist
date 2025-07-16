@@ -19,22 +19,22 @@
   "outbounds": [
     {
       "type": "dns",
+      "tag": "smartstreaming",
       "server": {
         "address": "${SMARTSTREAMING_DNS}"
-      },
-      "tag": "smartstreaming"
+      }
     },
     {
       "type": "dns",
+      "tag": "controld",
       "server": {
         "address": "https://${RESOLVER_ID}/dns-query"
-      },
-      "tag": "controld"
+      }
     }
   ],
   "route": {
     "rules": [
-__ROUTE_RULES__
+${ROUTE_RULES}
     ]
   }
 }
