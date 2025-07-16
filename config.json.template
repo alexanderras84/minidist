@@ -1,0 +1,40 @@
+{
+  "log": {
+    "level": "info"
+  },
+  "inbounds": [
+    {
+      "type": "dns",
+      "listen": "::",
+      "listen_port": 443,
+      "tag": "dns",
+      "tls": {
+        "enabled": true,
+        "server_name": "${SUBDOMAIN}",
+        "certificate_path": "/certs/${SUBDOMAIN}.crt",
+        "key_path": "/certs/${SUBDOMAIN}.key"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "dns",
+      "server": {
+        "address": "${SMARTSTREAMING_DNS}"
+      },
+      "tag": "smartstreaming"
+    },
+    {
+      "type": "dns",
+      "server": {
+        "address": "https://${RESOLVER_ID}/dns-query"
+      },
+      "tag": "controld"
+    }
+  ],
+  "route": {
+    "rules": [
+__ROUTE_RULES__
+    ]
+  }
+}
